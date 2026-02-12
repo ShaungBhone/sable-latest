@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ResetPasswordForm from "@/components/auth/ResetPasswordForm.vue";
+// import ResetPasswordForm from "@/components/auth/ResetPasswordForm.vue";
 
 definePageMeta({
   layout: "guest",
@@ -12,7 +12,7 @@ definePageMeta({
     <div class="flex flex-col gap-4 p-6 md:p-10">
       <div class="flex flex-1 items-center justify-center">
         <div class="w-full max-w-xs">
-          <ResetPasswordForm />
+          <!-- <ResetPasswordForm /> -->
         </div>
       </div>
     </div>
