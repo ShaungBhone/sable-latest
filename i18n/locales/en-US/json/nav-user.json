@@ -1,6 +1,11 @@
 {
   "navUser": {
     "languagePreferenceUpdated": "Language preference updated",
-    "languageSetTo": "Your language is now set to {locale}."
+    "languageSetTo": "Your language is now set to {locale}.",
+    "logOut": "Log out",
+    "loggingOut": "Logging out...",
+    "logoutSuccess": "Signed out",
+    "logoutError": "Sign out failed",
+    "logoutErrorDescription": "Please try again."
   }
 }

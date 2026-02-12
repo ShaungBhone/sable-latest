@@ -1,6 +1,11 @@
 {
   "navUser": {
-    "languagePreferenceUpdated": "อัปเดตการตั้งค่าภาษาเรียบร้อยแล้ว",
-    "languageSetTo": "ภาษาของคุณถูกตั้งเป็น {locale} แล้ว"
+    "languagePreferenceUpdated": "Language preference updated",
+    "languageSetTo": "Your language is now set to {locale}.",
+    "logOut": "Log out",
+    "loggingOut": "Logging out...",
+    "logoutSuccess": "Signed out",
+    "logoutError": "Sign out failed",
+    "logoutErrorDescription": "Please try again."
   }
 }

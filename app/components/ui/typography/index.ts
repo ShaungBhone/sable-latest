@@ -1,0 +1,12 @@
+export { default as TypographyBlockquote } from "./TypographyBlockquote.vue";
+export { default as TypographyH1 } from "./TypographyH1.vue";
+export { default as TypographyH2 } from "./TypographyH2.vue";
+export { default as TypographyH3 } from "./TypographyH3.vue";
+export { default as TypographyH4 } from "./TypographyH4.vue";
+export { default as TypographyInlineCode } from "./TypographyInlineCode.vue";
+export { default as TypographyLarge } from "./TypographyLarge.vue";
+export { default as TypographyLead } from "./TypographyLead.vue";
+export { default as TypographyList } from "./TypographyList.vue";
+export { default as TypographyMuted } from "./TypographyMuted.vue";
+export { default as TypographyP } from "./TypographyP.vue";
+export { default as TypographySmall } from "./TypographySmall.vue";
