@@ -1,0 +1,7 @@
+@theme {
+  --font-sans: "IBM Plex Sans Thai", sans-serif;
+}
+
+:root {
+  font-weight: 600;
+}

@@ -1,3 +1,20 @@
 {
-    "login": "เข้าสู่ระบบ"
+  "login": {
+    "title": "Login",
+    "description": "Login with your Apple or Google account",
+    "appleButton": "Login with Apple",
+    "googleButton": "Login with Google",
+    "continueWithEmail": "Or continue with email",
+    "emailLabel": "Email",
+    "emailPlaceholder": "m@example.com",
+    "passwordLabel": "Password",
+    "forgotPassword": "Forgot your password?",
+    "submitButton": "Login",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "termsAgreementPrefix": "By clicking continue, you agree to our",
+    "termsOfService": "Terms of Service",
+    "and": "and",
+    "privacyPolicy": "Privacy Policy"
+  }
 }

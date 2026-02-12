@@ -4,25 +4,42 @@ export default defineNuxtConfig({
     "shadcn-nuxt",
     "@vueuse/nuxt",
     "@nuxtjs/i18n",
+    "@nuxt/fonts",
   ],
 
+  css: ["@/assets/css/tailwind.css"],
+
+  fonts: {
+    provider: "google",
+    defaults: {
+      weights: [600],
+      styles: ["normal"],
+    },
+    families: [
+      {
+        name: "IBM Plex Sans Thai",
+      },
+    ],
+  },
+
   i18n: {
+    strategy: "prefix_and_default",
     locales: [
       {
         name: "English",
         code: "en",
         language: "en-US",
-        file: 'en-US/index.ts'
+        file: "en-US/index.ts",
       },
       {
         name: "Thailand",
         code: "th",
         language: "th-TH",
-        file: 'th-TH/index.ts'
+        file: "th-TH/index.ts",
       },
     ],
 
-    defaultLocale: "th-TH",
+    defaultLocale: "th",
   },
 
   shadcn: {

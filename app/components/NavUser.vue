@@ -34,7 +34,7 @@ const props = defineProps<{
   };
 }>();
 
-const { locale, locales, t } = useI18n();
+const { locale, locales } = useI18n();
 const switchLocalePath = useSwitchLocalePath();
 
 const availableLocales = computed(() => {
