@@ -1,0 +1,6 @@
+{
+  "navUser": {
+    "languagePreferenceUpdated": "Language preference updated",
+    "languageSetTo": "Your language is now set to {locale}."
+  }
+}
