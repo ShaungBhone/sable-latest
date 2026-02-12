@@ -5,6 +5,7 @@ export const iframeHeight = "800px";
 
 <script setup lang="ts">
 import AppSidebar from "@/components/AppSidebar.vue";
+import ThemeToggle from "@/components/ThemeToggle.vue";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -45,6 +46,11 @@ import {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+        </div>
+        <div class="ml-auto px-4">
+          <ClientOnly>
+            <ThemeToggle />
+          </ClientOnly>
         </div>
       </header>
       <div class="flex flex-1 flex-col p-4 pt-0">
