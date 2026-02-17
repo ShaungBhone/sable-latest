@@ -7,7 +7,6 @@ import {
   Languages,
   LogOut,
 } from "lucide-vue-next";
-import { getAuth, signOut } from "firebase/auth";
 import { useFirebaseApp } from "vuefire";
 import { toast } from "vue-sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,12 +40,21 @@ const { locale, locales, t } = useI18n();
 const switchLocalePath = useSwitchLocalePath();
 const localePath = useLocalePath();
 const { isMobile } = useSidebar();
-let firebaseAuth: ReturnType<typeof getAuth> | null = null;
+let firebaseAuthModule: typeof import("firebase/auth") | null = null;
+let firebaseAuth: import("firebase/auth").Auth | null = null;
 
-try {
-  firebaseAuth = getAuth(useFirebaseApp());
-} catch {
-  firebaseAuth = null;
+async function ensureFirebaseAuth() {
+  if (firebaseAuth) {
+    return firebaseAuth;
+  }
+
+  try {
+    firebaseAuthModule ??= await import("firebase/auth");
+    firebaseAuth = firebaseAuthModule.getAuth(useFirebaseApp());
+    return firebaseAuth;
+  } catch {
+    return null;
+  }
 }
 
 const localeOptions = computed(() =>
@@ -91,8 +99,10 @@ async function onLogout() {
       method: "DELETE",
     });
 
-    if (firebaseAuth) {
-      await signOut(firebaseAuth);
+    const authInstance = await ensureFirebaseAuth();
+
+    if (authInstance && firebaseAuthModule) {
+      await firebaseAuthModule.signOut(authInstance);
     }
 
     authStore.clear();

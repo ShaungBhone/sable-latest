@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue";
 import { toTypedSchema } from "@vee-validate/zod";
-import { getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { useForm } from "vee-validate";
 import { useFirebaseApp } from "vuefire";
 import { z } from "zod";
@@ -26,12 +25,21 @@ const authStore = useAuthStore();
 const route = useRoute();
 const localePath = useLocalePath();
 const { t } = useI18n();
-let firebaseAuth: ReturnType<typeof getAuth> | null = null;
+let firebaseAuthModule: typeof import("firebase/auth") | null = null;
+let firebaseAuth: import("firebase/auth").Auth | null = null;
 
-try {
-  firebaseAuth = getAuth(useFirebaseApp());
-} catch {
-  firebaseAuth = null;
+async function ensureFirebaseAuth() {
+  if (firebaseAuth) {
+    return firebaseAuth;
+  }
+
+  try {
+    firebaseAuthModule ??= await import("firebase/auth");
+    firebaseAuth = firebaseAuthModule.getAuth(useFirebaseApp());
+    return firebaseAuth;
+  } catch {
+    return null;
+  }
 }
 
 const validationSchema = toTypedSchema(
@@ -94,7 +102,9 @@ function resolveRedirectTarget(rawValue: unknown) {
 }
 
 const submit = handleSubmit(async (values) => {
-  if (!firebaseAuth) {
+  const authInstance = await ensureFirebaseAuth();
+
+  if (!authInstance || !firebaseAuthModule) {
     const message = t("login.authNotConfigured");
     setErrors({
       email: message,
@@ -105,8 +115,8 @@ const submit = handleSubmit(async (values) => {
   }
 
   try {
-    const credential = await signInWithEmailAndPassword(
-      firebaseAuth,
+    const credential = await firebaseAuthModule.signInWithEmailAndPassword(
+      authInstance,
       values.email,
       values.password,
     );
@@ -132,8 +142,8 @@ const submit = handleSubmit(async (values) => {
 
     await navigateTo(resolveRedirectTarget(route.query.redirect));
   } catch (error) {
-    if (firebaseAuth) {
-      await signOut(firebaseAuth).catch(() => undefined);
+    if (authInstance && firebaseAuthModule) {
+      await firebaseAuthModule.signOut(authInstance).catch(() => undefined);
     }
 
     const errorMessage = getErrorMessage(error);

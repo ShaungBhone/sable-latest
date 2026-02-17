@@ -1,3 +1,5 @@
+const isTest = process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
+
 export default defineNuxtConfig({
   modules: [
     "@nuxtjs/tailwindcss",
@@ -7,7 +9,7 @@ export default defineNuxtConfig({
     "@nuxtjs/i18n",
     "@nuxt/fonts",
     "nuxt-vuefire",
-    "@nuxt/test-utils/module",
+    ...(isTest ? ["@nuxt/test-utils/module"] : []),
   ],
 
   css: ["@/assets/css/tailwind.css"],
@@ -82,6 +84,47 @@ export default defineNuxtConfig({
       storageBucket: process.env.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     },
     auth: false,
+  },
+
+  nitro: {
+    sourceMap: false,
+    externals: {
+      trace: false,
+    },
+  },
+
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) {
+              return;
+            }
+
+            if (id.includes("firebase")) {
+              return "vendor-firebase";
+            }
+
+            if (id.includes("lucide-vue-next")) {
+              return "vendor-icons";
+            }
+
+            if (
+              id.includes("vee-validate") ||
+              id.includes("@vee-validate") ||
+              id.includes("/zod/")
+            ) {
+              return "vendor-validation";
+            }
+
+            if (id.includes("vuefire")) {
+              return "vendor-vuefire";
+            }
+          },
+        },
+      },
+    },
   },
 
   compatibilityDate: "2025-07-15",
