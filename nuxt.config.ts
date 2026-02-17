@@ -3,8 +3,11 @@ export default defineNuxtConfig({
     "@nuxtjs/tailwindcss",
     "shadcn-nuxt",
     "@vueuse/nuxt",
+    "@pinia/nuxt",
     "@nuxtjs/i18n",
     "@nuxt/fonts",
+    "nuxt-vuefire",
+    "@nuxt/test-utils/module",
   ],
 
   css: ["@/assets/css/tailwind.css"],
@@ -57,6 +60,28 @@ export default defineNuxtConfig({
       },
       link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
     },
+  },
+
+  runtimeConfig: {
+    auth: {
+      sessionCookieName: "sable.session",
+      sessionMaxAgeSeconds: 60 * 60 * 24 * 5,
+      backendBaseUrl: "",
+      backendProfilePath: "/login/user",
+      backendProfileMethod: "POST",
+    },
+  },
+
+  vuefire: {
+    config: {
+      apiKey: process.env.NUXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID,
+      appId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID,
+      messagingSenderId: process.env.NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      storageBucket: process.env.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    },
+    auth: false,
   },
 
   compatibilityDate: "2025-07-15",

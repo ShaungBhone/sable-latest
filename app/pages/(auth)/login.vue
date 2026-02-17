@@ -9,6 +9,7 @@ import LoginForm from "@/components/login/LoginForm.vue";
 definePageMeta({
   layout: "guest",
   path: "/login",
+  auth: "guest",
 });
 </script>
 

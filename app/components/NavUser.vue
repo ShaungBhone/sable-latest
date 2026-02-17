@@ -7,7 +7,9 @@ import {
   Languages,
   LogOut,
 } from "lucide-vue-next";
-
+import { getAuth, signOut } from "firebase/auth";
+import { useFirebaseApp } from "vuefire";
+import { toast } from "vue-sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -24,7 +26,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { toast } from "vue-sonner";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps<{
   user: {
@@ -34,19 +36,40 @@ const props = defineProps<{
   };
 }>();
 
-const { locale, locales } = useI18n();
+const authStore = useAuthStore();
+const { locale, locales, t } = useI18n();
 const switchLocalePath = useSwitchLocalePath();
+const localePath = useLocalePath();
+const { isMobile } = useSidebar();
+let firebaseAuth: ReturnType<typeof getAuth> | null = null;
 
-const availableLocales = computed(() => {
-  return locales.value.filter((i) => i.code !== locale.value);
-});
+try {
+  firebaseAuth = getAuth(useFirebaseApp());
+} catch {
+  firebaseAuth = null;
+}
+
+const localeOptions = computed(() =>
+  locales.value.map((item) =>
+    typeof item === "string"
+      ? { code: item, name: item }
+      : { code: item.code, name: item.name ?? item.code },
+  ),
+);
+
+const availableLocales = computed(() =>
+  localeOptions.value.filter((item) => item.code !== locale.value),
+);
+const isLoggingOut = ref(false);
 
 watch(
   () => locale.value,
   (newLocale, oldLocale) => {
     if (!oldLocale || newLocale === oldLocale) return;
 
-    const selectedLocale = locales.value.find((i) => i.code === newLocale);
+    const selectedLocale = localeOptions.value.find(
+      (item) => item.code === newLocale,
+    );
     const localeLabel = selectedLocale?.name ?? newLocale;
 
     toast(t("navUser.languagePreferenceUpdated"), {
@@ -56,7 +79,39 @@ watch(
   },
 );
 
-const { isMobile } = useSidebar();
+async function onLogout() {
+  if (isLoggingOut.value) {
+    return;
+  }
+
+  isLoggingOut.value = true;
+
+  try {
+    await $fetch("/api/auth/session", {
+      method: "DELETE",
+    });
+
+    if (firebaseAuth) {
+      await signOut(firebaseAuth);
+    }
+
+    authStore.clear();
+
+    toast.success(t("navUser.logoutSuccess"), {
+      position: "bottom-center",
+    });
+
+    await navigateTo(localePath("/login"));
+  } catch (error) {
+    console.error("[auth] logout failed", error);
+    toast.error(t("navUser.logoutError"), {
+      description: t("navUser.logoutErrorDescription"),
+      position: "bottom-center",
+    });
+  } finally {
+    isLoggingOut.value = false;
+  }
+}
 </script>
 
 <template>
@@ -70,7 +125,9 @@ const { isMobile } = useSidebar();
           >
             <Avatar class="h-8 w-8 rounded-lg">
               <AvatarImage :src="user.avatar" :alt="user.name" />
-              <AvatarFallback class="rounded-lg"> CN </AvatarFallback>
+              <AvatarFallback class="rounded-lg">
+                {{ user.name.slice(0, 2).toUpperCase() }}
+              </AvatarFallback>
             </Avatar>
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-medium">{{ user.name }}</span>
@@ -89,7 +146,9 @@ const { isMobile } = useSidebar();
             <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
               <Avatar class="h-8 w-8 rounded-lg">
                 <AvatarImage :src="user.avatar" :alt="user.name" />
-                <AvatarFallback class="rounded-lg"> CN </AvatarFallback>
+                <AvatarFallback class="rounded-lg">
+                  {{ user.name.slice(0, 2).toUpperCase() }}
+                </AvatarFallback>
               </Avatar>
               <div class="grid flex-1 text-left text-sm leading-tight">
                 <span class="truncate font-semibold">{{ user.name }}</span>
@@ -100,13 +159,13 @@ const { isMobile } = useSidebar();
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <NuxtLink
-              v-for="locale in availableLocales"
-              :key="locale.code"
-              :to="switchLocalePath(locale.code)"
+              v-for="availableLocale in availableLocales"
+              :key="availableLocale.code"
+              :to="switchLocalePath(availableLocale.code)"
             >
               <DropdownMenuItem>
                 <Languages />
-                {{ locale.name }}
+                {{ availableLocale.name }}
               </DropdownMenuItem>
             </NuxtLink>
           </DropdownMenuGroup>
@@ -126,9 +185,9 @@ const { isMobile } = useSidebar();
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
+          <DropdownMenuItem :disabled="isLoggingOut" @select.prevent="onLogout">
             <LogOut />
-            Log out
+            {{ isLoggingOut ? t("navUser.loggingOut") : t("navUser.logOut") }}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

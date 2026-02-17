@@ -1,23 +1,27 @@
 <script setup lang="ts">
+import type { LucideIcon } from "lucide-vue-next";
 import type { SidebarProps } from "@/components/ui/sidebar";
-
 import {
-  AudioWaveform,
-  BookOpen,
   Bot,
-  Command,
-  Frame,
+  Briefcase,
+  ChartNoAxesCombined,
+  CircleUserRound,
+  ClipboardList,
+  Cookie,
+  CreditCard,
   GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
+  LayoutDashboard,
+  Megaphone,
+  Puzzle,
+  Settings,
+  ShoppingBag,
+  Users,
+  Workflow,
 } from "lucide-vue-next";
 import NavMain from "@/components/NavMain.vue";
 import NavProjects from "@/components/NavProjects.vue";
 import NavUser from "@/components/NavUser.vue";
 import TeamSwitcher from "@/components/TeamSwitcher.vue";
-
 import {
   Sidebar,
   SidebarContent,
@@ -25,140 +29,101 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { moduleMenuItems } from "@/constants/module-menu";
+import { useAuthStore } from "@/stores/auth";
+import {
+  hasModulePermission,
+  matchesRoutePath,
+  normalizeRoutePath,
+} from "@/utils/permission-routing";
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   collapsible: "icon",
 });
 
-// This is sample data.
-const data = {
+const authStore = useAuthStore();
+const route = useRoute();
+const { locales } = useI18n();
+
+const localeCodes = computed(() =>
+  locales.value.map((locale) =>
+    typeof locale === "string" ? locale : locale.code,
+  ),
+);
+
+const normalizedCurrentPath = computed(() =>
+  normalizeRoutePath(route.path, localeCodes.value),
+);
+
+const iconByModule: Record<string, LucideIcon> = {
+  MODULE_HOME: LayoutDashboard,
+  MODULE_TODO_LIST: ClipboardList,
+  MODULE_CUSTOMER_LIST: Users,
+  MODULE_CUSTOMER_360: CircleUserRound,
+  MODULE_SEGMENT: ChartNoAxesCombined,
+  MODULE_AUDIENCE: ChartNoAxesCombined,
+  MODULE_PRODUCT: ShoppingBag,
+  MODULE_CAMPAIGN: Megaphone,
+  MODULE_SHORTLINK: Megaphone,
+  MODULE_FACEBOOK_ADS: Megaphone,
+  MODULE_REWARD: Megaphone,
+  MODULE_ONSITE_CAMPAIGN: Megaphone,
+  MODULE_AUTOMATE: Workflow,
+  MODULE_AUTOMATE_NEW_WORKFLOW: Workflow,
+  MODULE_JOURNEY_AUTOMATION: Workflow,
+  MODULE_AI_AGENT: Bot,
+  MODULE_EXTENSION: Puzzle,
+  MODULE_COOKIE_CONSENT: Cookie,
+  MODULE_BILLING: CreditCard,
+  MODULE_SETTING: Settings,
+};
+
+const navMain = computed(() =>
+  moduleMenuItems.map((item) => {
+    const subItems =
+      item.subItems?.map((subItem) => ({
+        title: subItem.title,
+        url: subItem.link,
+        isActive: matchesRoutePath(normalizedCurrentPath.value, subItem.link),
+        isLocked: !hasModulePermission(authStore.permissions, subItem.id),
+      })) ?? [];
+
+    const isActive =
+      matchesRoutePath(normalizedCurrentPath.value, item.link) ||
+      subItems.some((subItem) => subItem.isActive);
+
+    return {
+      title: item.title,
+      url: item.link,
+      icon: iconByModule[item.id] ?? Briefcase,
+      isActive,
+      isLocked: !hasModulePermission(authStore.permissions, item.id),
+      items: subItems.length > 0 ? subItems : undefined,
+    };
+  }),
+);
+
+const data = computed(() => ({
   user: {
-    name: "shadcn",
-    email: "m@example.com",
+    name: authStore.user?.displayName || authStore.user?.email || "User",
+    email: authStore.user?.email || "",
     avatar: "",
   },
   teams: [
     {
-      name: "Acme Inc",
+      name: "Sable",
       logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
-  navMain: [
-    {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
+      plan: "Workspace",
     },
   ],
   projects: [
     {
-      name: "Design Engineering",
+      name: "Product Roadmap",
       url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
+      icon: Briefcase,
     },
   ],
-};
+}));
 </script>
 
 <template>
@@ -167,7 +132,7 @@ const data = {
       <TeamSwitcher :teams="data.teams" />
     </SidebarHeader>
     <SidebarContent>
-      <NavMain :items="data.navMain" />
+      <NavMain :items="navMain" />
       <NavProjects :projects="data.projects" />
     </SidebarContent>
     <SidebarFooter>

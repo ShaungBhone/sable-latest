@@ -6,6 +6,8 @@
     "loggingOut": "Logging out...",
     "logoutSuccess": "Signed out",
     "logoutError": "Sign out failed",
-    "logoutErrorDescription": "Please try again."
+    "logoutErrorDescription": "Please try again.",
+    "permissionDenied": "Permission denied",
+    "permissionDeniedDescription": "You do not have access to this module."
   }
 }

@@ -13,31 +13,47 @@
     "lint:prettier": "prettier . --check",
     "format": "prettier . --write",
     "preview": "nuxt preview",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@nuxt/fonts": "^0.13.0",
     "@nuxtjs/i18n": "^10.2.3",
+    "@pinia/nuxt": "^0.11.2",
+    "@vee-validate/zod": "^4.15.1",
     "@vueuse/core": "^14.2.1",
     "@vueuse/nuxt": "^14.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "firebase": "^12.5.0",
     "lucide-vue-next": "^0.563.0",
     "nuxt": "^4.3.1",
+    "nuxt-vuefire": "^1.1.0",
+    "pinia": "^3.0.3",
     "reka-ui": "^2.8.0",
     "shadcn-nuxt": "^2.4.3",
     "tailwind-merge": "^3.4.0",
+    "vee-validate": "^4.15.1",
     "vue": "^3.5.28",
     "vue-router": "^4.6.4",
-    "vue-sonner": "^2.0.9"
+    "vue-sonner": "^2.0.9",
+    "vuefire": "^3.2.2",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@nuxt/test-utils": "^4.0.0",
     "@nuxtjs/tailwindcss": "^7.0.0-beta.1",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^20.6.1",
     "oxlint": "^1.46.0",
+    "playwright-core": "^1.58.2",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4.1.18",
     "tw-animate-css": "^1.4.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
