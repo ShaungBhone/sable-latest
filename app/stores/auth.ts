@@ -13,10 +13,8 @@ export const useAuthStore = defineStore("auth", {
       user: null,
       permissions: [],
       brandConfig: null,
-      session: null,
       hydrated: false,
     }) as AuthState & {
-      session: AuthMeResponse["session"] | null;
       hydrated: boolean;
     },
 
@@ -30,7 +28,6 @@ export const useAuthStore = defineStore("auth", {
       this.user = payload.user;
       this.permissions = payload.permissions;
       this.brandConfig = payload.brandConfig;
-      this.session = payload.session;
       this.hydrated = true;
     },
 
@@ -39,7 +36,6 @@ export const useAuthStore = defineStore("auth", {
       this.user = null;
       this.permissions = [];
       this.brandConfig = null;
-      this.session = null;
       this.hydrated = true;
     },
 
@@ -58,8 +54,13 @@ export const useAuthStore = defineStore("auth", {
 
       fetchMePromise = (async () => {
         try {
+          const headers = import.meta.server
+            ? useRequestHeaders(["cookie"])
+            : undefined;
           const response = await $fetch<AuthMeResponse>("/api/auth/me", {
             method: "GET",
+            headers,
+            credentials: "include",
           });
 
           this.applyAuthPayload(response);

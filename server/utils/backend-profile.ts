@@ -1,4 +1,6 @@
-import type { H3Event } from "h3";
+import { createError, type H3Event, type RouterMethod } from "h3";
+import { $fetch } from "ofetch";
+import { useRuntimeConfig } from "nitropack/runtime/internal/config";
 
 interface TokenClaimsFallback {
   uid: string;
@@ -63,6 +65,32 @@ function buildBackendUrl(baseUrl: string, path: string) {
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
   return new URL(normalizedPath, normalizedBase).toString();
+}
+
+const FETCH_METHODS = new Set<Uppercase<RouterMethod>>([
+  "GET",
+  "HEAD",
+  "PATCH",
+  "POST",
+  "PUT",
+  "DELETE",
+  "CONNECT",
+  "OPTIONS",
+  "TRACE",
+]);
+
+function normalizeFetchMethod(value: unknown): Uppercase<RouterMethod> {
+  if (typeof value !== "string") {
+    return "POST";
+  }
+
+  const normalized = value.trim().toUpperCase();
+
+  if (FETCH_METHODS.has(normalized as Uppercase<RouterMethod>)) {
+    return normalized as Uppercase<RouterMethod>;
+  }
+
+  return "POST";
 }
 
 export function decodeIdTokenUnsafe(idToken: string): TokenClaimsFallback {
@@ -162,9 +190,7 @@ export async function fetchBackendProfile(event: H3Event, idToken: string) {
   const config = useRuntimeConfig(event);
   const backendBaseUrl = config.auth.backendBaseUrl;
   const profilePath = config.auth.backendProfilePath || "/login/user";
-  const profileMethod = String(
-    config.auth.backendProfileMethod || "POST",
-  ).toUpperCase();
+  const profileMethod = normalizeFetchMethod(config.auth.backendProfileMethod);
 
   if (!backendBaseUrl) {
     throw createError({
