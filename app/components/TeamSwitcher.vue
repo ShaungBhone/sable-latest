@@ -21,21 +21,23 @@ import {
 } from "@/components/ui/sidebar";
 
 const props = defineProps<{
-  teams: {
-    name: string;
-    logo: Component;
-    plan: string;
-  }[];
+  teams: Team[];
 }>();
 
+type Team = {
+  name: string;
+  logo: Component;
+  plan: string;
+};
+
 const { isMobile } = useSidebar();
-const activeTeam = ref(props.teams[0]);
+const activeTeam = ref<Team | null>(props.teams[0] ?? null);
 </script>
 
 <template>
   <SidebarMenu>
     <SidebarMenuItem>
-      <DropdownMenu>
+      <DropdownMenu v-if="activeTeam">
         <DropdownMenuTrigger as-child>
           <SidebarMenuButton
             size="lg"
@@ -89,6 +91,17 @@ const activeTeam = ref(props.teams[0]);
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <SidebarMenuButton v-else size="lg" disabled>
+        <div
+          class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
+        >
+          <Plus class="size-4" />
+        </div>
+        <div class="grid flex-1 text-left text-sm leading-tight">
+          <span class="truncate font-medium">No team</span>
+          <span class="truncate text-xs">N/A</span>
+        </div>
+      </SidebarMenuButton>
     </SidebarMenuItem>
   </SidebarMenu>
 </template>

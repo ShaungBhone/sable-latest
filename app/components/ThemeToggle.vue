@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const THEME_MODES = ["light", "dark", "auto"] as const;
-const THEME_PALETTES = ["sable", "violet", "orange"] as const;
+const THEME_PALETTES = ["sable", "violet"] as const;
 
 type ThemeMode = (typeof THEME_MODES)[number];
 type ThemePalette = (typeof THEME_PALETTES)[number];
@@ -109,16 +109,12 @@ useHead(() => ({
         @update:modelValue="setPalette"
       >
         <DropdownMenuRadioItem value="sable">
-          <span class="size-3 rounded-full bg-cyan-500" />
+          <span class="size-3 rounded-full bg-primary" />
           <span>Sable</span>
         </DropdownMenuRadioItem>
         <DropdownMenuRadioItem value="violet">
           <span class="size-3 rounded-full bg-violet-500" />
           <span>Violet</span>
-        </DropdownMenuRadioItem>
-        <DropdownMenuRadioItem value="orange">
-          <span class="size-3 rounded-full bg-orange-500" />
-          <span>Orange</span>
         </DropdownMenuRadioItem>
       </DropdownMenuRadioGroup>
     </DropdownMenuContent>
