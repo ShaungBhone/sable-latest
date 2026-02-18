@@ -7,16 +7,13 @@ import {
   decodeIdTokenUnsafe,
   fetchBackendProfile,
 } from "../../utils/backend-profile";
+import { createUnauthorizedError } from "../../utils/http-errors";
 
 export default defineEventHandler(async (event) => {
   const sessionCookie = getAuthSessionCookie(event);
 
   if (!sessionCookie) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Unauthorized",
-      message: "Missing session cookie.",
-    });
+    throw createUnauthorizedError("Missing session cookie.");
   }
 
   const decodedToken = decodeIdTokenUnsafe(sessionCookie);

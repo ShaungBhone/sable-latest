@@ -3,6 +3,7 @@ import {
   setAuthSessionCookie,
 } from "../../utils/auth-session";
 import { fetchBackendProfile } from "../../utils/backend-profile";
+import { createBadRequestError } from "../../utils/http-errors";
 
 interface SessionRequestBody {
   idToken?: string;
@@ -13,11 +14,7 @@ export default defineEventHandler(async (event) => {
   const idToken = body?.idToken;
 
   if (!idToken || typeof idToken !== "string") {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "Bad Request",
-      message: "idToken is required.",
-    });
+    throw createBadRequestError("idToken is required.");
   }
 
   // Validate token against backend before minting local app cookie.

@@ -1,6 +1,11 @@
-import { createError, type H3Event, type RouterMethod } from "h3";
+import { type H3Event, type RouterMethod } from "h3";
 import { $fetch } from "ofetch";
 import { useRuntimeConfig } from "nitropack/runtime/internal/config";
+import {
+  createBadGatewayError,
+  createServerConfigurationError,
+  createUnauthorizedError,
+} from "./http-errors";
 
 interface TokenClaimsFallback {
   uid: string;
@@ -193,11 +198,7 @@ export async function fetchBackendProfile(event: H3Event, idToken: string) {
   const profileMethod = normalizeFetchMethod(config.auth.backendProfileMethod);
 
   if (!backendBaseUrl) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Server configuration error",
-      message: "Missing NUXT_AUTH_BACKEND_BASE_URL.",
-    });
+    throw createServerConfigurationError("Missing NUXT_AUTH_BACKEND_BASE_URL.");
   }
 
   const fallbackClaims = decodeIdTokenUnsafe(idToken);
@@ -219,18 +220,10 @@ export async function fetchBackendProfile(event: H3Event, idToken: string) {
     const status = getErrorStatus(error);
 
     if (status === 401 || status === 403) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: "Unauthorized",
-        message: "Invalid authentication token.",
-      });
+      throw createUnauthorizedError("Invalid authentication token.");
     }
 
     console.error("[auth] Failed to fetch backend profile", error);
-    throw createError({
-      statusCode: 502,
-      statusMessage: "Bad Gateway",
-      message: "Unable to load user profile from backend.",
-    });
+    throw createBadGatewayError("Unable to load user profile from backend.");
   }
 }
