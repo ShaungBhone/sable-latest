@@ -5,7 +5,6 @@ export default defineVitestConfig({
     globals: true,
     include: ["test/**/*.spec.ts"],
     environment: "node",
-    environmentMatchGlobs: [["test/nuxt/**/*.spec.ts", "nuxt"]],
     hookTimeout: 600_000,
   },
 });
