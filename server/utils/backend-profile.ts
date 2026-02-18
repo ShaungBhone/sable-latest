@@ -22,8 +22,15 @@ interface BackendProfileUser {
   selectedBrandId: string | null;
 }
 
+interface BackendProfileBrand {
+  id: string;
+  name: string;
+  plan: string | null;
+}
+
 export interface BackendProfile {
   user: BackendProfileUser;
+  brands: BackendProfileBrand[];
   brandConfig: Record<string, unknown> | null;
   permissions: string[];
 }
@@ -48,6 +55,106 @@ function readPermissions(value: unknown): string[] {
     .filter((permission) => permission.length > 0);
 
   return Array.from(new Set(normalized));
+}
+
+function readBrandFromRecord(value: unknown): BackendProfileBrand | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id =
+    readString(value.id) ??
+    readString(value.brandId) ??
+    readString(value.brand_id);
+  const name =
+    readString(value.name) ??
+    readString(value.brandName) ??
+    readString(value.brand_name) ??
+    readString(value.title);
+  const plan =
+    readString(value.plan) ??
+    readString(value.packageName) ??
+    readString(value.package_name) ??
+    readString(value.type);
+
+  if (!id && !name) {
+    return null;
+  }
+
+  return {
+    id: id ?? name ?? "brand",
+    name: name ?? id ?? "Brand",
+    plan,
+  };
+}
+
+function readBrandList(value: unknown): BackendProfileBrand[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const brands: BackendProfileBrand[] = [];
+
+  for (const item of value) {
+    const brand = readBrandFromRecord(item);
+    if (!brand) {
+      continue;
+    }
+
+    const key = `${brand.id}:${brand.name}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    brands.push(brand);
+  }
+
+  return brands;
+}
+
+function readAllBrands(candidates: unknown[]): BackendProfileBrand[] {
+  const merged: BackendProfileBrand[] = [];
+  const seen = new Set<string>();
+
+  for (const candidate of candidates) {
+    const brands = readBrandList(candidate);
+    for (const brand of brands) {
+      if (seen.has(brand.id)) {
+        continue;
+      }
+
+      seen.add(brand.id);
+      merged.push(brand);
+    }
+  }
+
+  return merged;
+}
+
+function reorderBrandsBySelected(
+  brands: BackendProfileBrand[],
+  selectedBrandId: string | null,
+) {
+  if (!selectedBrandId || brands.length <= 1) {
+    return brands;
+  }
+
+  const selectedIndex = brands.findIndex(
+    (brand) => brand.id === selectedBrandId,
+  );
+  if (selectedIndex <= 0) {
+    return brands;
+  }
+
+  const [selectedBrand] = brands.splice(selectedIndex, 1);
+  if (!selectedBrand) {
+    return brands;
+  }
+
+  brands.unshift(selectedBrand);
+  return brands;
 }
 
 function getErrorStatus(error: unknown) {
@@ -162,30 +269,64 @@ function normalizeBackendProfile(
     permissions = ["MODULE_HOME"];
   }
 
+  const userId =
+    readString(userSource.id) ??
+    readString(userSource.userId) ??
+    readString(userSource.user_id) ??
+    fallback.uid;
+  const userEmail = readString(userSource.email) ?? fallback.email;
+  const userDisplayName =
+    readString(userSource.displayName) ??
+    readString(userSource.display_name) ??
+    readString(userSource.name) ??
+    fallback.name;
+  const companyId =
+    readString(userSource.companyId) ??
+    readString(userSource.company_id) ??
+    null;
+  const selectedBrandId =
+    readString(userSource.selectedBrandId) ??
+    readString(userSource.selected_brand_id) ??
+    readString(userSource.brandId) ??
+    readString(userSource.brand_id) ??
+    null;
+
+  let brands = readAllBrands([
+    data.brands,
+    data.brand_list,
+    data.all_brands,
+    data.allBrands,
+    data.user_brands,
+    userSource.brands,
+    userSource.brand_list,
+    userSource.all_brands,
+    brandConfig?.brands,
+    brandConfig?.brand_list,
+    brandConfig?.all_brands,
+  ]);
+
+  if (brands.length === 0) {
+    const fallbackBrand = readBrandFromRecord(brandConfig);
+    if (fallbackBrand) {
+      brands = [fallbackBrand];
+    }
+  }
+
+  if (brands.length === 0 && selectedBrandId) {
+    brands = [{ id: selectedBrandId, name: selectedBrandId, plan: null }];
+  }
+
+  brands = reorderBrandsBySelected(brands, selectedBrandId);
+
   return {
     user: {
-      id:
-        readString(userSource.id) ??
-        readString(userSource.userId) ??
-        readString(userSource.user_id) ??
-        fallback.uid,
-      email: readString(userSource.email) ?? fallback.email,
-      displayName:
-        readString(userSource.displayName) ??
-        readString(userSource.display_name) ??
-        readString(userSource.name) ??
-        fallback.name,
-      companyId:
-        readString(userSource.companyId) ??
-        readString(userSource.company_id) ??
-        null,
-      selectedBrandId:
-        readString(userSource.selectedBrandId) ??
-        readString(userSource.selected_brand_id) ??
-        readString(userSource.brandId) ??
-        readString(userSource.brand_id) ??
-        null,
+      id: userId,
+      email: userEmail,
+      displayName: userDisplayName,
+      companyId,
+      selectedBrandId,
     },
+    brands,
     brandConfig,
     permissions,
   } satisfies BackendProfile;

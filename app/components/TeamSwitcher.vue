@@ -2,7 +2,7 @@
 import type { Component } from "vue";
 
 import { ChevronsUpDown, Plus } from "lucide-vue-next";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,13 +25,36 @@ const props = defineProps<{
 }>();
 
 type Team = {
+  id: string;
   name: string;
   logo: Component;
   plan: string;
 };
 
 const { isMobile } = useSidebar();
-const activeTeam = ref<Team | null>(props.teams[0] ?? null);
+const activeTeam = ref<Team | null>(null);
+
+watch(
+  () => props.teams,
+  (teams) => {
+    if (teams.length === 0) {
+      activeTeam.value = null;
+      return;
+    }
+
+    if (!activeTeam.value) {
+      activeTeam.value = teams[0] ?? null;
+      return;
+    }
+
+    const nextActiveTeam =
+      teams.find((team) => team.id === activeTeam.value?.id) ??
+      teams[0] ??
+      null;
+    activeTeam.value = nextActiveTeam;
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -68,7 +91,7 @@ const activeTeam = ref<Team | null>(props.teams[0] ?? null);
           </DropdownMenuLabel>
           <DropdownMenuItem
             v-for="(team, index) in teams"
-            :key="team.name"
+            :key="team.id"
             class="gap-2 p-2"
             @click="activeTeam = team"
           >

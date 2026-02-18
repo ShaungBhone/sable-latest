@@ -11,6 +11,7 @@ export const useAuthStore = defineStore("auth", {
     ({
       status: "idle",
       user: null,
+      brands: [],
       permissions: [],
       brandConfig: null,
       hydrated: false,
@@ -26,6 +27,7 @@ export const useAuthStore = defineStore("auth", {
     applyAuthPayload(payload: AuthMeResponse) {
       this.status = "authenticated";
       this.user = payload.user;
+      this.brands = payload.brands;
       this.permissions = payload.permissions;
       this.brandConfig = payload.brandConfig;
       this.hydrated = true;
@@ -34,6 +36,7 @@ export const useAuthStore = defineStore("auth", {
     clear() {
       this.status = "unauthenticated";
       this.user = null;
+      this.brands = [];
       this.permissions = [];
       this.brandConfig = null;
       this.hydrated = true;

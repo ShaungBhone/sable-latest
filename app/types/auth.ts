@@ -20,9 +20,16 @@ export interface AuthUserInfo {
   selectedBrandId: string | null;
 }
 
+export interface AuthBrandInfo {
+  id: string;
+  name: string;
+  plan: string | null;
+}
+
 export interface AuthMeResponse {
   session: AuthSessionInfo;
   user: AuthUserInfo;
+  brands: AuthBrandInfo[];
   brandConfig: Record<string, unknown> | null;
   permissions: ModuleId[];
 }
@@ -30,6 +37,7 @@ export interface AuthMeResponse {
 export interface AuthState {
   status: AuthStatus;
   user: AuthMeResponse["user"] | null;
+  brands: AuthBrandInfo[];
   permissions: ModuleId[];
   brandConfig: Record<string, unknown> | null;
 }

@@ -4,6 +4,7 @@ import {
   getAuthSessionCookie,
 } from "../../utils/auth-session";
 import {
+  type BackendProfile,
   decodeIdTokenUnsafe,
   fetchBackendProfile,
 } from "../../utils/backend-profile";
@@ -18,7 +19,7 @@ export default defineEventHandler(async (event) => {
 
   const decodedToken = decodeIdTokenUnsafe(sessionCookie);
   const { maxAge } = getSessionCookieConfig(event);
-  let profile;
+  let profile: BackendProfile;
 
   try {
     profile = await fetchBackendProfile(event, sessionCookie);
@@ -41,6 +42,7 @@ export default defineEventHandler(async (event) => {
       ).toISOString(),
     },
     user: profile.user,
+    brands: profile.brands,
     brandConfig: profile.brandConfig,
     permissions: Array.from(new Set(profile.permissions)),
   };

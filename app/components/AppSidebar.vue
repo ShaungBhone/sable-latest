@@ -109,13 +109,12 @@ const data = computed(() => ({
     email: authStore.user?.email || "",
     avatar: "",
   },
-  teams: [
-    {
-      name: "Sable",
-      logo: GalleryVerticalEnd,
-      plan: "Workspace",
-    },
-  ],
+  teams: authStore.brands.map((brand) => ({
+    id: brand.id,
+    name: brand.name,
+    logo: GalleryVerticalEnd,
+    plan: brand.plan ?? "Brand",
+  })),
   projects: [
     {
       name: "Product Roadmap",

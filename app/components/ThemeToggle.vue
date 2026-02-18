@@ -109,7 +109,7 @@ useHead(() => ({
         @update:modelValue="setPalette"
       >
         <DropdownMenuRadioItem value="sable">
-          <span class="size-3 rounded-full bg-primary" />
+          <span class="size-3 rounded-full bg-orange-500" />
           <span>Sable</span>
         </DropdownMenuRadioItem>
         <DropdownMenuRadioItem value="violet">
