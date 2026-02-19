@@ -79,28 +79,30 @@ const iconByModule: Record<string, LucideIcon> = {
 };
 
 const navMain = computed(() =>
-  moduleMenuItems.map((item) => {
-    const subItems =
-      item.subItems?.map((subItem) => ({
-        title: subItem.title,
-        url: subItem.link,
-        isActive: matchesRoutePath(normalizedCurrentPath.value, subItem.link),
-        isLocked: !hasModulePermission(authStore.permissions, subItem.id),
-      })) ?? [];
+  moduleMenuItems
+    .filter((item) => !["MODULE_BILLING", "MODULE_SETTING"].includes(item.id))
+    .map((item) => {
+      const subItems =
+        item.subItems?.map((subItem) => ({
+          title: subItem.title,
+          url: subItem.link,
+          isActive: matchesRoutePath(normalizedCurrentPath.value, subItem.link),
+          isLocked: !hasModulePermission(authStore.permissions, subItem.id),
+        })) ?? [];
 
-    const isActive =
-      matchesRoutePath(normalizedCurrentPath.value, item.link) ||
-      subItems.some((subItem) => subItem.isActive);
+      const isActive =
+        matchesRoutePath(normalizedCurrentPath.value, item.link) ||
+        subItems.some((subItem) => subItem.isActive);
 
-    return {
-      title: item.title,
-      url: item.link,
-      icon: iconByModule[item.id] ?? Briefcase,
-      isActive,
-      isLocked: !hasModulePermission(authStore.permissions, item.id),
-      items: subItems.length > 0 ? subItems : undefined,
-    };
-  }),
+      return {
+        title: item.title,
+        url: item.link,
+        icon: iconByModule[item.id] ?? Briefcase,
+        isActive,
+        isLocked: !hasModulePermission(authStore.permissions, item.id),
+        items: subItems.length > 0 ? subItems : undefined,
+      };
+    }),
 );
 
 const selectedTeamId = computed({
@@ -120,7 +122,7 @@ const data = computed(() => ({
     id: brand.id,
     name: brand.name,
     logo: GalleryVerticalEnd,
-    plan: brand.plan ?? "Brand",
+    plan: brand.plan ?? "Workspace",
   })),
   projects: [
     {

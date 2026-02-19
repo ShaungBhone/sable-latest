@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import {
-  BadgeCheck,
-  Bell,
   ChevronsUpDown,
   CreditCard,
   Languages,
+  Lock,
   LogOut,
+  Settings,
 } from "lucide-vue-next";
 import { useFirebaseApp } from "vuefire";
 import { toast } from "vue-sonner";
@@ -26,6 +26,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuthStore } from "@/stores/auth";
+import { hasModulePermission } from "@/utils/permission-routing";
 
 const props = defineProps<{
   user: {
@@ -69,6 +70,12 @@ const availableLocales = computed(() =>
   localeOptions.value.filter((item) => item.code !== locale.value),
 );
 const isLoggingOut = ref(false);
+const isSettingLocked = computed(
+  () => !hasModulePermission(authStore.permissions, "MODULE_SETTING"),
+);
+const isBillingLocked = computed(
+  () => !hasModulePermission(authStore.permissions, "MODULE_BILLING"),
+);
 
 watch(
   () => locale.value,
@@ -86,6 +93,19 @@ watch(
     });
   },
 );
+
+function onProtectedMenuClick(event: Event, isLocked: boolean) {
+  if (!isLocked) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  toast.error(t("navUser.permissionDenied"), {
+    description: t("navUser.permissionDeniedDescription"),
+    position: "bottom-center",
+  });
+}
 
 async function onLogout() {
   if (isLoggingOut.value) {
@@ -181,18 +201,40 @@ async function onLogout() {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem>
-              <BadgeCheck />
-              Account
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <CreditCard />
-              Billing
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Bell />
-              Notifications
-            </DropdownMenuItem>
+            <NuxtLink
+              :to="localePath('/setting')"
+              @click="(event) => onProtectedMenuClick(event, isSettingLocked)"
+            >
+              <DropdownMenuItem>
+                <Settings
+                  :class="{ 'opacity-70 blur-[1px]': isSettingLocked }"
+                />
+                <span :class="{ 'opacity-70 blur-[1px]': isSettingLocked }">
+                  Setting
+                </span>
+                <Lock
+                  v-if="isSettingLocked"
+                  class="text-muted-foreground ml-auto size-3.5"
+                />
+              </DropdownMenuItem>
+            </NuxtLink>
+            <NuxtLink
+              :to="localePath('/bill-payment')"
+              @click="(event) => onProtectedMenuClick(event, isBillingLocked)"
+            >
+              <DropdownMenuItem>
+                <CreditCard
+                  :class="{ 'opacity-70 blur-[1px]': isBillingLocked }"
+                />
+                <span :class="{ 'opacity-70 blur-[1px]': isBillingLocked }">
+                  Billing
+                </span>
+                <Lock
+                  v-if="isBillingLocked"
+                  class="text-muted-foreground ml-auto size-3.5"
+                />
+              </DropdownMenuItem>
+            </NuxtLink>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem :disabled="isLoggingOut" @select.prevent="onLogout">

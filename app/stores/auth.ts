@@ -2,6 +2,7 @@ import type { AuthMeResponse, AuthState } from "@/types/auth";
 
 type FetchMeOptions = {
   force?: boolean;
+  requestHeaders?: Record<string, string>;
 };
 
 interface BrandContextResponse {
@@ -187,6 +188,7 @@ export const useAuthStore = defineStore("auth", {
     async refreshBrandContext(
       brandId: string | null,
       fallbackPermissions: string[] = [FALLBACK_PERMISSION],
+      requestHeaders?: Record<string, string>,
     ) {
       if (!brandId) {
         this.brandConfig = null;
@@ -195,14 +197,11 @@ export const useAuthStore = defineStore("auth", {
       }
 
       try {
-        const headers = import.meta.server
-          ? useRequestHeaders(["cookie"])
-          : undefined;
         const response = await $fetch<BrandContextResponse>(
           `/api/auth/brand-config/${encodeURIComponent(brandId)}`,
           {
             method: "GET",
-            headers,
+            headers: requestHeaders,
             credentials: "include",
           },
         );
@@ -218,7 +217,8 @@ export const useAuthStore = defineStore("auth", {
             : fallbackPermissions,
         );
       } catch (error) {
-        console.error("[auth] Failed to refresh brand context", error);
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[auth] Failed to refresh brand context: ${message}`);
         this.permissions = normalizePermissions(fallbackPermissions);
       }
     },
@@ -257,7 +257,7 @@ export const useAuthStore = defineStore("auth", {
     },
 
     async fetchMe(options: FetchMeOptions = {}) {
-      const { force = false } = options;
+      const { force = false, requestHeaders } = options;
 
       if (!force && this.hydrated) {
         if (import.meta.client && this.isAuthenticated) {
@@ -278,12 +278,9 @@ export const useAuthStore = defineStore("auth", {
 
       fetchMePromise = (async () => {
         try {
-          const headers = import.meta.server
-            ? useRequestHeaders(["cookie"])
-            : undefined;
           const response = await $fetch<AuthMeResponse>("/api/auth/me", {
             method: "GET",
-            headers,
+            headers: requestHeaders,
             credentials: "include",
           });
 
@@ -291,6 +288,7 @@ export const useAuthStore = defineStore("auth", {
           await this.refreshBrandContext(
             this.user?.selectedBrandId ?? null,
             response.permissions,
+            requestHeaders,
           );
           return true;
         } catch {

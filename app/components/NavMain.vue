@@ -69,7 +69,7 @@ function onMenuClick(event: Event, isLocked?: boolean) {
           <template v-if="item.items?.length">
             <CollapsibleTrigger
               as-child
-              @click="(event) => onMenuClick(event, item.isLocked)"
+              @click="onMenuClick($event as Event, item.isLocked)"
             >
               <SidebarMenuButton :tooltip="item.title">
                 <component
@@ -88,7 +88,7 @@ function onMenuClick(event: Event, isLocked?: boolean) {
                   class="text-muted-foreground ml-auto size-3.5"
                 />
                 <ChevronRight
-                  class="ml-1 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                  class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
                 />
               </SidebarMenuButton>
             </CollapsibleTrigger>

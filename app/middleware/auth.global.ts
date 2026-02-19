@@ -44,9 +44,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const localeCodes = getLocaleCodesFromNuxtApp();
   const activeLocale = getActiveLocale(to.path, localeCodes);
   const normalizedPath = normalizeRoutePath(to.path, localeCodes);
+  const requestHeaders = import.meta.server
+    ? useRequestHeaders(["cookie"])
+    : undefined;
 
   if (!authStore.hydrated || authStore.status === "idle") {
-    await authStore.fetchMe();
+    await authStore.fetchMe({ requestHeaders });
   }
 
   if (isGuestRoute(normalizedPath, localeCodes)) {
