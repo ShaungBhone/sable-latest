@@ -21,6 +21,14 @@ export const useAuthStore = defineStore("auth", {
 
   getters: {
     isAuthenticated: (state) => state.status === "authenticated",
+    selectedBrand: (state) => {
+      const selectedBrandId = state.user?.selectedBrandId;
+      return (
+        state.brands.find((brand) => brand.id === selectedBrandId) ??
+        state.brands[0] ??
+        null
+      );
+    },
   },
 
   actions: {

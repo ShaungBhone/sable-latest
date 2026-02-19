@@ -5,7 +5,6 @@ import {
 } from "../../utils/auth-session";
 import {
   type BackendProfile,
-  decodeIdTokenUnsafe,
   fetchBackendProfile,
 } from "../../utils/backend-profile";
 import { createUnauthorizedError } from "../../utils/http-errors";
@@ -17,7 +16,6 @@ export default defineEventHandler(async (event) => {
     throw createUnauthorizedError("Missing session cookie.");
   }
 
-  const decodedToken = decodeIdTokenUnsafe(sessionCookie);
   const { maxAge } = getSessionCookieConfig(event);
   let profile: BackendProfile;
 
@@ -33,17 +31,18 @@ export default defineEventHandler(async (event) => {
 
   setResponseHeader(event, "Cache-Control", "no-store");
 
+  const expiresAt = new Date(
+    (Math.floor(Date.now() / 1000) + maxAge) * 1000,
+  ).toISOString();
+
   return {
     session: {
-      uid: profile.user.id || decodedToken.uid,
-      email: profile.user.email ?? decodedToken.email,
-      expiresAt: new Date(
-        (decodedToken.exp ?? Math.floor(Date.now() / 1000) + maxAge) * 1000,
-      ).toISOString(),
+      uid: profile.user.id,
+      email: profile.user.email,
+      expiresAt,
     },
     user: profile.user,
     brands: profile.brands,
-    brandConfig: profile.brandConfig,
     permissions: Array.from(new Set(profile.permissions)),
   };
 });

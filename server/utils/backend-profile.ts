@@ -1,37 +1,23 @@
 import { type H3Event, type RouterMethod } from "h3";
 import { $fetch } from "ofetch";
 import { useRuntimeConfig } from "nitropack/runtime/internal/config";
-import {
-  createBadGatewayError,
-  createServerConfigurationError,
-  createUnauthorizedError,
-} from "./http-errors";
-
-interface TokenClaimsFallback {
-  uid: string;
-  email: string | null;
-  name: string | null;
-  exp: number | null;
-}
+import { createBadGatewayError } from "./http-errors";
 
 interface BackendProfileUser {
-  id: string;
+  id: string | null;
   email: string | null;
-  displayName: string | null;
   companyId: string | null;
   selectedBrandId: string | null;
 }
 
 interface BackendProfileBrand {
-  id: string;
-  name: string;
-  plan: string | null;
+  id: string | null;
+  name: string | null;
 }
 
 export interface BackendProfile {
   user: BackendProfileUser;
   brands: BackendProfileBrand[];
-  brandConfig: Record<string, unknown> | null;
   permissions: string[];
 }
 
@@ -58,33 +44,15 @@ function readPermissions(value: unknown): string[] {
 }
 
 function readBrandFromRecord(value: unknown): BackendProfileBrand | null {
-  if (!isRecord(value)) {
-    return null;
-  }
+  const data = value as Record<string, unknown>;
 
-  const id =
-    readString(value.id) ??
-    readString(value.brandId) ??
-    readString(value.brand_id);
-  const name =
-    readString(value.name) ??
-    readString(value.brandName) ??
-    readString(value.brand_name) ??
-    readString(value.title);
-  const plan =
-    readString(value.plan) ??
-    readString(value.packageName) ??
-    readString(value.package_name) ??
-    readString(value.type);
+  const id = readString(data?._id);
 
-  if (!id && !name) {
-    return null;
-  }
+  const name = readString(data?.brand_name);
 
   return {
-    id: id ?? name ?? "brand",
-    name: name ?? id ?? "Brand",
-    plan,
+    id,
+    name,
   };
 }
 
@@ -103,7 +71,7 @@ function readBrandList(value: unknown): BackendProfileBrand[] {
     }
 
     const key = `${brand.id}:${brand.name}`;
-    if (seen.has(key)) {
+    if (!brand.id || seen.has(key)) {
       continue;
     }
 
@@ -121,7 +89,7 @@ function readAllBrands(candidates: unknown[]): BackendProfileBrand[] {
   for (const candidate of candidates) {
     const brands = readBrandList(candidate);
     for (const brand of brands) {
-      if (seen.has(brand.id)) {
+      if (!brand.id || seen.has(brand.id)) {
         continue;
       }
 
@@ -157,22 +125,6 @@ function reorderBrandsBySelected(
   return brands;
 }
 
-function getErrorStatus(error: unknown) {
-  if (isRecord(error)) {
-    const statusCode = Number(error.statusCode);
-    if (!Number.isNaN(statusCode) && statusCode > 0) {
-      return statusCode;
-    }
-    const response = isRecord(error.response) ? error.response : null;
-    const status = response ? Number(response.status) : Number.NaN;
-    if (!Number.isNaN(status) && status > 0) {
-      return status;
-    }
-  }
-
-  return 500;
-}
-
 function buildBackendUrl(baseUrl: string, path: string) {
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
@@ -205,115 +157,43 @@ function normalizeFetchMethod(value: unknown): Uppercase<RouterMethod> {
   return "POST";
 }
 
-export function decodeIdTokenUnsafe(idToken: string): TokenClaimsFallback {
-  try {
-    const segments = idToken.split(".");
-    const payload = segments[1];
+function normalizeBackendProfile(payload: unknown) {
+  const data = isRecord(payload) ? payload : {};
 
-    if (!payload) {
-      return {
-        uid: "",
-        email: null,
-        name: null,
-        exp: null,
-      };
-    }
-
-    const decoded = JSON.parse(
-      Buffer.from(payload, "base64url").toString("utf8"),
-    ) as Record<string, unknown>;
-
-    return {
-      uid:
-        readString(decoded.user_id) ??
-        readString(decoded.uid) ??
-        readString(decoded.sub) ??
-        "",
-      email: readString(decoded.email),
-      name: readString(decoded.name),
-      exp: typeof decoded.exp === "number" ? decoded.exp : null,
-    };
-  } catch {
-    return {
-      uid: "",
-      email: null,
-      name: null,
-      exp: null,
-    };
-  }
-}
-
-function normalizeBackendProfile(
-  payload: unknown,
-  fallback: TokenClaimsFallback,
-) {
-  const source = isRecord(payload) ? payload : {};
-  const data = isRecord(source.data) ? source.data : source;
-  const userSource = isRecord(data.user) ? data.user : data;
-  const brandConfigCandidate = data.brandConfig ?? data.brand_config ?? null;
-  const brandConfig = isRecord(brandConfigCandidate)
-    ? brandConfigCandidate
-    : null;
-
-  let permissions = readPermissions(data.permissions);
-
-  if (permissions.length === 0) {
-    permissions = readPermissions(data.permission_menu);
-  }
-
-  if (permissions.length === 0) {
-    permissions = readPermissions(brandConfig?.permission_menu);
-  }
+  let permissions = readPermissions(data.permission);
 
   if (permissions.length === 0) {
     permissions = ["MODULE_HOME"];
   }
 
-  const userId =
-    readString(userSource.id) ??
-    readString(userSource.userId) ??
-    readString(userSource.user_id) ??
-    fallback.uid;
-  const userEmail = readString(userSource.email) ?? fallback.email;
-  const userDisplayName =
-    readString(userSource.displayName) ??
-    readString(userSource.display_name) ??
-    readString(userSource.name) ??
-    fallback.name;
-  const companyId =
-    readString(userSource.companyId) ??
-    readString(userSource.company_id) ??
+  const userId = readString(data?._id);
+  const userEmail = readString(data?.email);
+  const companyId = readString(data?.company_id);
+
+  let selectedBrandId =
+    readString(data?.selectedBrandId) ??
+    readString(data?.selected_brand_id) ??
+    readString(data?.brandId) ??
+    readString(data?.brand_id) ??
     null;
-  const selectedBrandId =
-    readString(userSource.selectedBrandId) ??
-    readString(userSource.selected_brand_id) ??
-    readString(userSource.brandId) ??
-    readString(userSource.brand_id) ??
-    null;
+  
+  console.log('asdf', selectedBrandId);
 
   let brands = readAllBrands([
-    data.brands,
-    data.brand_list,
-    data.all_brands,
-    data.allBrands,
-    data.user_brands,
-    userSource.brands,
-    userSource.brand_list,
-    userSource.all_brands,
-    brandConfig?.brands,
-    brandConfig?.brand_list,
-    brandConfig?.all_brands,
+    data?.brand,
+    data?.brands,
+    data?.brand_list,
+    data?.all_brands,
+    data?.allBrands,
+    data?.user_brands,
   ]);
 
-  if (brands.length === 0) {
-    const fallbackBrand = readBrandFromRecord(brandConfig);
-    if (fallbackBrand) {
-      brands = [fallbackBrand];
-    }
+  if (brands.length === 0 && selectedBrandId) {
+    brands = [{ id: selectedBrandId, name: selectedBrandId }];
   }
 
-  if (brands.length === 0 && selectedBrandId) {
-    brands = [{ id: selectedBrandId, name: selectedBrandId, plan: null }];
+  if (!selectedBrandId && brands.length > 0) {
+    selectedBrandId = brands[0]?.id ?? null;
   }
 
   brands = reorderBrandsBySelected(brands, selectedBrandId);
@@ -322,12 +202,10 @@ function normalizeBackendProfile(
     user: {
       id: userId,
       email: userEmail,
-      displayName: userDisplayName,
       companyId,
       selectedBrandId,
     },
     brands,
-    brandConfig,
     permissions,
   } satisfies BackendProfile;
 }
@@ -337,12 +215,6 @@ export async function fetchBackendProfile(event: H3Event, idToken: string) {
   const backendBaseUrl = config.auth.backendBaseUrl;
   const profilePath = config.auth.backendProfilePath || "/login/user";
   const profileMethod = normalizeFetchMethod(config.auth.backendProfileMethod);
-
-  if (!backendBaseUrl) {
-    throw createServerConfigurationError("Missing NUXT_AUTH_BACKEND_BASE_URL.");
-  }
-
-  const fallbackClaims = decodeIdTokenUnsafe(idToken);
 
   try {
     const response = await $fetch<unknown>(
@@ -356,14 +228,8 @@ export async function fetchBackendProfile(event: H3Event, idToken: string) {
       },
     );
 
-    return normalizeBackendProfile(response, fallbackClaims);
+    return normalizeBackendProfile(response);
   } catch (error) {
-    const status = getErrorStatus(error);
-
-    if (status === 401 || status === 403) {
-      throw createUnauthorizedError("Invalid authentication token.");
-    }
-
     console.error("[auth] Failed to fetch backend profile", error);
     throw createBadGatewayError("Unable to load user profile from backend.");
   }
