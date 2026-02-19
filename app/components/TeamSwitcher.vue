@@ -2,7 +2,7 @@
 import type { Component } from "vue";
 
 import { ChevronsUpDown, Plus } from "lucide-vue-next";
-import { ref, watch } from "vue";
+import { computed } from "vue";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,11 @@ import {
 
 const props = defineProps<{
   teams: Team[];
+  selectedTeamId?: string | null;
+}>();
+
+const emit = defineEmits<{
+  (event: "update:selectedTeamId", value: string): void;
 }>();
 
 type Team = {
@@ -32,29 +37,16 @@ type Team = {
 };
 
 const { isMobile } = useSidebar();
-const activeTeam = ref<Team | null>(null);
-
-watch(
-  () => props.teams,
-  (teams) => {
-    if (teams.length === 0) {
-      activeTeam.value = null;
-      return;
-    }
-
-    if (!activeTeam.value) {
-      activeTeam.value = teams[0] ?? null;
-      return;
-    }
-
-    const nextActiveTeam =
-      teams.find((team) => team.id === activeTeam.value?.id) ??
-      teams[0] ??
-      null;
-    activeTeam.value = nextActiveTeam;
-  },
-  { immediate: true },
+const activeTeam = computed(
+  () =>
+    props.teams.find((team) => team.id === props.selectedTeamId) ??
+    props.teams[0] ??
+    null,
 );
+
+function selectTeam(teamId: string) {
+  emit("update:selectedTeamId", teamId);
+}
 </script>
 
 <template>
@@ -93,7 +85,7 @@ watch(
             v-for="(team, index) in teams"
             :key="team.id"
             class="gap-2 p-2"
-            @click="activeTeam = team"
+            @click="selectTeam(team.id)"
           >
             <div
               class="flex size-6 items-center justify-center rounded-sm border"

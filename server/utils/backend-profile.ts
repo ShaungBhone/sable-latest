@@ -176,17 +176,8 @@ function normalizeBackendProfile(payload: unknown) {
     readString(data?.brandId) ??
     readString(data?.brand_id) ??
     null;
-  
-  console.log('asdf', selectedBrandId);
 
-  let brands = readAllBrands([
-    data?.brand,
-    data?.brands,
-    data?.brand_list,
-    data?.all_brands,
-    data?.allBrands,
-    data?.user_brands,
-  ]);
+  let brands = readAllBrands([data?.brand, data?.brands]);
 
   if (brands.length === 0 && selectedBrandId) {
     brands = [{ id: selectedBrandId, name: selectedBrandId }];

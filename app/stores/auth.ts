@@ -4,6 +4,136 @@ type FetchMeOptions = {
   force?: boolean;
 };
 
+interface BrandContextResponse {
+  brandConfig: Record<string, unknown> | null;
+  permissions: string[];
+}
+
+const BRAND_ID_STORAGE_KEY = "brandId";
+const FALLBACK_PERMISSION = "MODULE_HOME";
+
+function readStoredBrandId() {
+  if (import.meta.server) {
+    return null;
+  }
+
+  const value = localStorage.getItem(BRAND_ID_STORAGE_KEY);
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function persistBrandId(brandId: string | null) {
+  if (import.meta.server) {
+    return;
+  }
+
+  if (!brandId) {
+    localStorage.removeItem(BRAND_ID_STORAGE_KEY);
+    return;
+  }
+
+  localStorage.setItem(BRAND_ID_STORAGE_KEY, brandId);
+}
+
+function resolveSelectedBrandId(payload: AuthMeResponse) {
+  const brandIds = new Set(payload.brands.map((brand) => brand.id));
+  const storedBrandId = readStoredBrandId();
+  const backendSelectedBrandId = payload.user.selectedBrandId;
+
+  if (storedBrandId && brandIds.has(storedBrandId)) {
+    return storedBrandId;
+  }
+
+  if (backendSelectedBrandId && brandIds.has(backendSelectedBrandId)) {
+    return backendSelectedBrandId;
+  }
+
+  return payload.brands[0]?.id ?? null;
+}
+
+function normalizePermissions(
+  permissions: string[] | null | undefined,
+  fallback: string[] = [FALLBACK_PERMISSION],
+) {
+  const normalized = (Array.isArray(permissions) ? permissions : [])
+    .map((permission) =>
+      typeof permission === "string" ? permission.trim() : "",
+    )
+    .filter((permission) => permission.length > 0);
+
+  const unique = Array.from(new Set(normalized));
+  if (unique.length > 0) {
+    return unique;
+  }
+
+  const normalizedFallback = (Array.isArray(fallback) ? fallback : [])
+    .map((permission) =>
+      typeof permission === "string" ? permission.trim() : "",
+    )
+    .filter((permission) => permission.length > 0);
+  const fallbackUnique = Array.from(new Set(normalizedFallback));
+
+  return fallbackUnique.length > 0 ? fallbackUnique : [FALLBACK_PERMISSION];
+}
+
+function extractPermissionsFromUnknown(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const normalized = value
+    .map((permission) =>
+      typeof permission === "string" ? permission.trim() : "",
+    )
+    .filter((permission) => permission.length > 0);
+
+  return Array.from(new Set(normalized));
+}
+
+function extractPermissionsFromBrandConfig(
+  brandConfig: Record<string, unknown> | null,
+) {
+  if (!brandConfig) {
+    return [];
+  }
+
+  const visited = new Set<object>();
+
+  const readDeep = (value: unknown): string[] => {
+    if (!value || typeof value !== "object") {
+      return [];
+    }
+
+    const record = value as Record<string, unknown>;
+    if (visited.has(record)) {
+      return [];
+    }
+    visited.add(record);
+
+    const directPermissions = extractPermissionsFromUnknown(record.permissions);
+    if (directPermissions.length > 0) {
+      return directPermissions;
+    }
+
+    const permissionMenu = extractPermissionsFromUnknown(
+      record.permission_menu,
+    );
+    if (permissionMenu.length > 0) {
+      return permissionMenu;
+    }
+
+    for (const nestedValue of Object.values(record)) {
+      const nestedPermissions = readDeep(nestedValue);
+      if (nestedPermissions.length > 0) {
+        return nestedPermissions;
+      }
+    }
+
+    return [];
+  };
+
+  return readDeep(brandConfig);
+}
+
 let fetchMePromise: Promise<boolean> | null = null;
 
 export const useAuthStore = defineStore("auth", {
@@ -33,12 +163,64 @@ export const useAuthStore = defineStore("auth", {
 
   actions: {
     applyAuthPayload(payload: AuthMeResponse) {
+      const selectedBrandId = resolveSelectedBrandId(payload);
+      const permissionsFromBrandConfig = extractPermissionsFromBrandConfig(
+        payload.brandConfig,
+      );
+
       this.status = "authenticated";
-      this.user = payload.user;
+      this.user = {
+        ...payload.user,
+        selectedBrandId,
+      };
       this.brands = payload.brands;
-      this.permissions = payload.permissions;
-      this.brandConfig = payload.brandConfig;
+      this.permissions = normalizePermissions(
+        payload.permissions,
+        permissionsFromBrandConfig,
+      );
+      this.brandConfig = payload.brandConfig ?? null;
       this.hydrated = true;
+
+      persistBrandId(selectedBrandId);
+    },
+
+    async refreshBrandContext(
+      brandId: string | null,
+      fallbackPermissions: string[] = [FALLBACK_PERMISSION],
+    ) {
+      if (!brandId) {
+        this.brandConfig = null;
+        this.permissions = normalizePermissions(fallbackPermissions);
+        return;
+      }
+
+      try {
+        const headers = import.meta.server
+          ? useRequestHeaders(["cookie"])
+          : undefined;
+        const response = await $fetch<BrandContextResponse>(
+          `/api/auth/brand-config/${encodeURIComponent(brandId)}`,
+          {
+            method: "GET",
+            headers,
+            credentials: "include",
+          },
+        );
+
+        this.brandConfig = response.brandConfig ?? null;
+        const permissionsFromBrandConfig = extractPermissionsFromBrandConfig(
+          response.brandConfig,
+        );
+        this.permissions = normalizePermissions(
+          response.permissions,
+          permissionsFromBrandConfig.length > 0
+            ? permissionsFromBrandConfig
+            : fallbackPermissions,
+        );
+      } catch (error) {
+        console.error("[auth] Failed to refresh brand context", error);
+        this.permissions = normalizePermissions(fallbackPermissions);
+      }
     },
 
     clear() {
@@ -50,10 +232,41 @@ export const useAuthStore = defineStore("auth", {
       this.hydrated = true;
     },
 
+    async setSelectedBrandId(brandId: string | null) {
+      if (!this.user) {
+        return;
+      }
+
+      const previousBrandId = this.user.selectedBrandId;
+      const nextBrandId = this.brands.some((brand) => brand.id === brandId)
+        ? brandId
+        : (this.brands[0]?.id ?? null);
+
+      if (nextBrandId === previousBrandId && this.brandConfig) {
+        persistBrandId(nextBrandId);
+        return;
+      }
+
+      this.user = {
+        ...this.user,
+        selectedBrandId: nextBrandId,
+      };
+
+      persistBrandId(nextBrandId);
+      await this.refreshBrandContext(nextBrandId, this.permissions);
+    },
+
     async fetchMe(options: FetchMeOptions = {}) {
       const { force = false } = options;
 
       if (!force && this.hydrated) {
+        if (import.meta.client && this.isAuthenticated) {
+          const storedBrandId = readStoredBrandId();
+          if (storedBrandId && storedBrandId !== this.user?.selectedBrandId) {
+            await this.setSelectedBrandId(storedBrandId);
+          }
+        }
+
         return this.isAuthenticated;
       }
 
@@ -75,6 +288,10 @@ export const useAuthStore = defineStore("auth", {
           });
 
           this.applyAuthPayload(response);
+          await this.refreshBrandContext(
+            this.user?.selectedBrandId ?? null,
+            response.permissions,
+          );
           return true;
         } catch {
           this.clear();

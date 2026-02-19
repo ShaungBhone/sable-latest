@@ -71,6 +71,8 @@ export default defineNuxtConfig({
       backendBaseUrl: "",
       backendProfilePath: "/login/user",
       backendProfileMethod: "POST",
+      backendBrandConfigPath: "/brand-config/:brandId",
+      backendBrandConfigMethod: "GET",
     },
   },
 

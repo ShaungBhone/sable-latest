@@ -103,6 +103,13 @@ const navMain = computed(() =>
   }),
 );
 
+const selectedTeamId = computed({
+  get: () => authStore.user?.selectedBrandId ?? authStore.brands[0]?.id ?? null,
+  set: (brandId: string | null) => {
+    authStore.setSelectedBrandId(brandId);
+  },
+});
+
 const data = computed(() => ({
   user: {
     name: authStore.user?.displayName || authStore.user?.email || "User",
@@ -128,7 +135,10 @@ const data = computed(() => ({
 <template>
   <Sidebar v-bind="props">
     <SidebarHeader>
-      <TeamSwitcher :teams="data.teams" />
+      <TeamSwitcher
+        v-model:selected-team-id="selectedTeamId"
+        :teams="data.teams"
+      />
     </SidebarHeader>
     <SidebarContent>
       <NavMain :items="navMain" />

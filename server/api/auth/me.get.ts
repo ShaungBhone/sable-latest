@@ -43,6 +43,7 @@ export default defineEventHandler(async (event) => {
     },
     user: profile.user,
     brands: profile.brands,
+    brandConfig: null,
     permissions: Array.from(new Set(profile.permissions)),
   };
 });
