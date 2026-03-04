@@ -56,7 +56,7 @@ function onMenuClick(event: Event, isLocked?: boolean) {
 
 <template>
   <SidebarGroup>
-    <SidebarGroupLabel>Platform</SidebarGroupLabel>
+    <SidebarGroupLabel>General</SidebarGroupLabel>
     <SidebarMenu>
       <Collapsible
         v-for="item in items"

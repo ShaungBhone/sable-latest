@@ -17,7 +17,7 @@ export interface ModuleMenuItem {
 export const moduleMenuItems: ModuleMenuItem[] = [
   {
     id: "MODULE_HOME",
-    title: "Home",
+    title: "Dashboard",
     link: "/",
   },
   {
