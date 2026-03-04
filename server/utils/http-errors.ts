@@ -31,3 +31,15 @@ export function createBadGatewayError(message: string) {
     message,
   });
 }
+
+export function createUpstreamError(
+  statusCode: number,
+  message: string,
+  statusMessage?: string,
+) {
+  return createError({
+    statusCode,
+    statusMessage: statusMessage || undefined,
+    message,
+  });
+}

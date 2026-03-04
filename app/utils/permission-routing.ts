@@ -19,6 +19,17 @@ export const guestRoutes = [
   "/reset-password",
 ] as const;
 
+export function isPublicRegisterRoute(path: string, localeCodes: string[] = []) {
+  const normalized = normalizeRoutePath(path, localeCodes);
+
+  return (
+    normalized === "/register" ||
+    normalized === "/register/product" ||
+    normalized === "/register/summary" ||
+    normalized.startsWith("/register/verifyEmail/")
+  );
+}
+
 function canonicalPath(path: string) {
   if (!path) return "/";
 

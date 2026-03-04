@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
+import type { AuthSessionCreateResponse } from "@/types/auth";
 
 const props = defineProps<{
   class?: HTMLAttributes["class"];
@@ -122,12 +123,24 @@ const submit = handleSubmit(async (values) => {
     );
     const idToken = await credential.user.getIdToken(true);
 
-    await $fetch("/api/auth/session", {
-      method: "POST",
-      body: {
-        idToken,
+    const sessionResponse = await $fetch<AuthSessionCreateResponse>(
+      "/api/auth/session",
+      {
+        method: "POST",
+        body: {
+          idToken,
+        },
       },
-    });
+    );
+
+    if (sessionResponse.state === "onboarding_required") {
+      toast.success(t("login.onboardingRequired"), {
+        position: "bottom-center",
+      });
+
+      await navigateTo(localePath("/register/account"));
+      return;
+    }
 
     const hasSession = await authStore.fetchMe({ force: true });
 
@@ -142,11 +155,12 @@ const submit = handleSubmit(async (values) => {
 
     await navigateTo(resolveRedirectTarget(route.query.redirect));
   } catch (error) {
+    const errorMessage = getErrorMessage(error);
+
     if (authInstance && firebaseAuthModule) {
       await firebaseAuthModule.signOut(authInstance).catch(() => undefined);
     }
 
-    const errorMessage = getErrorMessage(error);
     setFieldError("password", errorMessage);
     toast.error(errorMessage, {
       position: "bottom-center",

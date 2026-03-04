@@ -1,7 +1,9 @@
-import { type H3Event, type RouterMethod } from "h3";
-import { $fetch } from "ofetch";
-import { useRuntimeConfig } from "nitropack/runtime/internal/config";
-import { createBadGatewayError } from "./http-errors";
+import type { H3Event } from "h3";
+import {
+  fetchBackend,
+  getUpstreamErrorInfo,
+  normalizeFetchMethod,
+} from "./backend-http";
 
 interface BackendProfileUser {
   id: string | null;
@@ -20,6 +22,9 @@ export interface BackendProfile {
   brands: BackendProfileBrand[];
   permissions: string[];
 }
+
+const DEFAULT_BACKEND_PROFILE_PATH = "/login/user";
+const DEFAULT_BACKEND_PROFILE_METHOD = "POST";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -46,13 +51,9 @@ function readPermissions(value: unknown): string[] {
 function readBrandFromRecord(value: unknown): BackendProfileBrand | null {
   const data = value as Record<string, unknown>;
 
-  const id = readString(data?._id);
-
-  const name = readString(data?.brand_name);
-
   return {
-    id,
-    name,
+    id: readString(data?._id),
+    name: readString(data?.brand_name),
   };
 }
 
@@ -82,7 +83,7 @@ function readBrandList(value: unknown): BackendProfileBrand[] {
   return brands;
 }
 
-function readAllBrands(candidates: unknown[]): BackendProfileBrand[] {
+function readAllBrands(candidates: unknown[]) {
   const merged: BackendProfileBrand[] = [];
   const seen = new Set<string>();
 
@@ -125,43 +126,10 @@ function reorderBrandsBySelected(
   return brands;
 }
 
-function buildBackendUrl(baseUrl: string, path: string) {
-  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
-  return new URL(normalizedPath, normalizedBase).toString();
-}
-
-const FETCH_METHODS = new Set<Uppercase<RouterMethod>>([
-  "GET",
-  "HEAD",
-  "PATCH",
-  "POST",
-  "PUT",
-  "DELETE",
-  "CONNECT",
-  "OPTIONS",
-  "TRACE",
-]);
-
-function normalizeFetchMethod(value: unknown): Uppercase<RouterMethod> {
-  if (typeof value !== "string") {
-    return "POST";
-  }
-
-  const normalized = value.trim().toUpperCase();
-
-  if (FETCH_METHODS.has(normalized as Uppercase<RouterMethod>)) {
-    return normalized as Uppercase<RouterMethod>;
-  }
-
-  return "POST";
-}
-
 function normalizeBackendProfile(payload: unknown) {
   const data = isRecord(payload) ? payload : {};
 
   let permissions = readPermissions(data.permission);
-
   if (permissions.length === 0) {
     permissions = ["MODULE_HOME"];
   }
@@ -169,7 +137,6 @@ function normalizeBackendProfile(payload: unknown) {
   const userId = readString(data?._id);
   const userEmail = readString(data?.email);
   const companyId = readString(data?.company_id);
-
   let selectedBrandId =
     readString(data?.selectedBrandId) ??
     readString(data?.selected_brand_id) ??
@@ -178,7 +145,6 @@ function normalizeBackendProfile(payload: unknown) {
     null;
 
   let brands = readAllBrands([data?.brand, data?.brands]);
-
   if (brands.length === 0 && selectedBrandId) {
     brands = [{ id: selectedBrandId, name: selectedBrandId }];
   }
@@ -187,8 +153,6 @@ function normalizeBackendProfile(payload: unknown) {
     selectedBrandId = brands[0]?.id ?? null;
   }
 
-  brands = reorderBrandsBySelected(brands, selectedBrandId);
-
   return {
     user: {
       id: userId,
@@ -196,32 +160,32 @@ function normalizeBackendProfile(payload: unknown) {
       companyId,
       selectedBrandId,
     },
-    brands,
+    brands: reorderBrandsBySelected(brands, selectedBrandId),
     permissions,
   } satisfies BackendProfile;
 }
 
+export function isNoBrandError(error: unknown) {
+  const upstream = getUpstreamErrorInfo(error);
+  return upstream?.statusCode === 401 && upstream.message === "No brand";
+}
+
 export async function fetchBackendProfile(event: H3Event, idToken: string) {
-  const config = useRuntimeConfig(event);
-  const backendBaseUrl = config.auth.backendBaseUrl;
-  const profilePath = config.auth.backendProfilePath || "/login/user";
-  const profileMethod = normalizeFetchMethod(config.auth.backendProfileMethod);
+  const profilePath = DEFAULT_BACKEND_PROFILE_PATH;
+  const profileMethod = normalizeFetchMethod(
+    DEFAULT_BACKEND_PROFILE_METHOD,
+    "POST",
+  );
 
-  try {
-    const response = await $fetch<unknown>(
-      buildBackendUrl(backendBaseUrl, profilePath),
-      {
-        method: profileMethod,
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-          "x-firebase-id-token": idToken,
-        },
-      },
-    );
+  const response = await fetchBackend<unknown>(event, profilePath, {
+    method: profileMethod,
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      "x-firebase-id-token": idToken,
+    },
+    fallbackMessage: "Unable to load user profile from backend.",
+    logPrefix: "[auth] Failed to fetch backend profile",
+  });
 
-    return normalizeBackendProfile(response);
-  } catch (error) {
-    console.error("[auth] Failed to fetch backend profile", error);
-    throw createBadGatewayError("Unable to load user profile from backend.");
-  }
+  return normalizeBackendProfile(response);
 }

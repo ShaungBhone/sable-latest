@@ -66,13 +66,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     auth: {
-      sessionCookieName: "sable.session",
-      sessionMaxAgeSeconds: 60 * 60 * 24 * 5,
-      backendBaseUrl: "",
-      backendProfilePath: "/login/user",
-      backendProfileMethod: "POST",
-      backendBrandConfigPath: "/brand-config/:brandId",
-      backendBrandConfigMethod: "GET",
+      backendBaseUrl: process.env.HOST_API || "",
     },
   },
 

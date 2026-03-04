@@ -1,10 +1,6 @@
-import {
-  clearAuthSessionCookie,
-  clearOnboardingSessionCookie,
-} from "../../utils/auth-session";
+import { clearOnboardingSessionCookie } from "../../../utils/auth-session";
 
 export default defineEventHandler(async (event) => {
-  clearAuthSessionCookie(event);
   clearOnboardingSessionCookie(event);
   setResponseHeader(event, "Cache-Control", "no-store");
 

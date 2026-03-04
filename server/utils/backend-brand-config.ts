@@ -1,41 +1,20 @@
-import { type H3Event, type RouterMethod } from "h3";
-import { $fetch } from "ofetch";
-import { useRuntimeConfig } from "nitropack/runtime/internal/config";
-import { createBadGatewayError } from "./http-errors";
+import type { H3Event } from "h3";
+import {
+  fetchBackend,
+  interpolatePath,
+  normalizeFetchMethod,
+} from "./backend-http";
 
 interface BackendBrandConfigResponse {
   brandConfig: Record<string, unknown> | null;
   permissions: string[];
 }
 
-const FETCH_METHODS = new Set<Uppercase<RouterMethod>>([
-  "GET",
-  "HEAD",
-  "PATCH",
-  "POST",
-  "PUT",
-  "DELETE",
-  "CONNECT",
-  "OPTIONS",
-  "TRACE",
-]);
+const DEFAULT_BACKEND_BRAND_CONFIG_PATH = "/brand-config/:brandId";
+const DEFAULT_BACKEND_BRAND_CONFIG_METHOD = "GET";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function normalizeFetchMethod(value: unknown): Uppercase<RouterMethod> {
-  if (typeof value !== "string") {
-    return "GET";
-  }
-
-  const normalized = value.trim().toUpperCase();
-
-  if (FETCH_METHODS.has(normalized as Uppercase<RouterMethod>)) {
-    return normalized as Uppercase<RouterMethod>;
-  }
-
-  return "GET";
 }
 
 function readPermissions(value: unknown): string[] {
@@ -61,21 +40,6 @@ function readPermissionsFromCandidates(candidates: unknown[]) {
   }
 
   return [];
-}
-
-function buildBackendUrl(baseUrl: string, path: string) {
-  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
-  return new URL(normalizedPath, normalizedBase).toString();
-}
-
-function interpolatePath(pathTemplate: string, brandId: string) {
-  const encodedBrandId = encodeURIComponent(brandId);
-  if (pathTemplate.includes(":brandId")) {
-    return pathTemplate.replace(":brandId", encodedBrandId);
-  }
-
-  return `${pathTemplate.replace(/\/$/, "")}/${encodedBrandId}`;
 }
 
 function normalizeBackendBrandConfig(
@@ -123,26 +87,19 @@ export async function fetchBackendBrandConfig(
   brandId: string,
 ) {
   const config = useRuntimeConfig(event);
-  const backendBaseUrl = config.auth.backendBaseUrl;
-  const pathTemplate = config.auth.backendBrandConfigPath;
-  const method = normalizeFetchMethod(config.auth.backendBrandConfigMethod);
-  const backendPath = interpolatePath(pathTemplate, brandId);
+  const pathTemplate = DEFAULT_BACKEND_BRAND_CONFIG_PATH;
+  const method = normalizeFetchMethod(DEFAULT_BACKEND_BRAND_CONFIG_METHOD, "GET");
+  const backendPath = interpolatePath(pathTemplate, "brandId", brandId);
 
-  try {
-    const response = await $fetch<unknown>(
-      buildBackendUrl(backendBaseUrl, backendPath),
-      {
-        method,
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-          "x-firebase-id-token": idToken,
-        },
-      },
-    );
+  const response = await fetchBackend<unknown>(event, backendPath, {
+    method,
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      "x-firebase-id-token": idToken,
+    },
+    fallbackMessage: "Unable to load brand config from backend.",
+    logPrefix: "[auth] Failed to fetch backend brand config",
+  });
 
-    return normalizeBackendBrandConfig(response);
-  } catch (error) {
-    console.error("[auth] Failed to fetch backend brand config", error);
-    throw createBadGatewayError("Unable to load brand config from backend.");
-  }
+  return normalizeBackendBrandConfig(response);
 }

@@ -2,6 +2,7 @@ import { useAuthStore } from "@/stores/auth";
 import {
   getFirstAllowedPath,
   isGuestRoute,
+  isPublicRegisterRoute,
   normalizeRoutePath,
   resolveRoutePermission,
 } from "@/utils/permission-routing";
@@ -52,7 +53,27 @@ export default defineNuxtRouteMiddleware(async (to) => {
     await authStore.fetchMe({ requestHeaders });
   }
 
-  if (isGuestRoute(normalizedPath, localeCodes)) {
+  if (normalizedPath === "/register/account") {
+    if (authStore.isAuthenticated) {
+      return navigateTo(toLocalizedPath("/", activeLocale));
+    }
+
+    try {
+      await $fetch("/api/auth/onboarding/me", {
+        method: "GET",
+        credentials: "include",
+        headers: requestHeaders,
+      });
+      return;
+    } catch {
+      return navigateTo(toLocalizedPath("/login", activeLocale));
+    }
+  }
+
+  if (
+    isGuestRoute(normalizedPath, localeCodes) ||
+    isPublicRegisterRoute(normalizedPath, localeCodes)
+  ) {
     if (authStore.isAuthenticated) {
       const targetPath = getFirstAllowedPath(authStore.permissions) ?? "/";
       const normalizedTarget = normalizeRoutePath(targetPath, localeCodes);

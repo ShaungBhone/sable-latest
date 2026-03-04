@@ -34,6 +34,15 @@ export interface AuthMeResponse {
   permissions: ModuleId[];
 }
 
+export type AuthSessionCreateResponse =
+  | { ok: true; state: "authenticated"; expiresAt: string }
+  | { ok: true; state: "onboarding_required"; expiresAt: string };
+
+export interface OnboardingMeResponse {
+  authenticated: true;
+  email: string | null;
+}
+
 export interface AuthState {
   status: AuthStatus;
   user: AuthMeResponse["user"] | null;
