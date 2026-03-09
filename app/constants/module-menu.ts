@@ -21,6 +21,11 @@ export const moduleMenuItems: ModuleMenuItem[] = [
     link: "/",
   },
   {
+    id: "MODULE_TODO_LIST",
+    title: "Todos",
+    link: "/todos",
+  },
+  {
     id: "MODULE_EXTENSION",
     title: "Extension",
     link: "/",

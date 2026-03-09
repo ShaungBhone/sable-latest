@@ -11,15 +11,45 @@ interface BrandContextResponse {
 }
 
 const BRAND_ID_STORAGE_KEY = "brandId";
+const BRAND_ID_COOKIE_KEY = "brandId";
+const BRAND_ID_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 const FALLBACK_PERMISSION = "MODULE_HOME";
 
-function readStoredBrandId() {
+function normalizeStoredBrandId(value: string | null | undefined) {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function readBrandIdFromCookieHeader(cookieHeader?: string) {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const encodedPrefix = `${encodeURIComponent(BRAND_ID_COOKIE_KEY)}=`;
+  const rawPrefix = `${BRAND_ID_COOKIE_KEY}=`;
+  const cookie = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(encodedPrefix) || part.startsWith(rawPrefix));
+
+  if (!cookie) {
+    return null;
+  }
+
+  const value = cookie.slice(cookie.indexOf("=") + 1);
+  return normalizeStoredBrandId(decodeURIComponent(value));
+}
+
+function readStoredBrandId(requestHeaders?: Record<string, string>) {
+  const cookieBrandId = readBrandIdFromCookieHeader(requestHeaders?.cookie);
+  if (cookieBrandId) {
+    return cookieBrandId;
+  }
+
   if (import.meta.server) {
     return null;
   }
 
-  const value = localStorage.getItem(BRAND_ID_STORAGE_KEY);
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
+  return normalizeStoredBrandId(localStorage.getItem(BRAND_ID_STORAGE_KEY));
 }
 
 function persistBrandId(brandId: string | null) {
@@ -27,17 +57,25 @@ function persistBrandId(brandId: string | null) {
     return;
   }
 
-  if (!brandId) {
+  const normalizedBrandId = normalizeStoredBrandId(brandId);
+  if (!normalizedBrandId) {
+    document.cookie = `${BRAND_ID_COOKIE_KEY}=; path=/; max-age=0; samesite=lax`;
     localStorage.removeItem(BRAND_ID_STORAGE_KEY);
     return;
   }
 
-  localStorage.setItem(BRAND_ID_STORAGE_KEY, brandId);
+  document.cookie =
+    `${BRAND_ID_COOKIE_KEY}=${encodeURIComponent(normalizedBrandId)}; ` +
+    `path=/; max-age=${BRAND_ID_COOKIE_MAX_AGE}; samesite=lax`;
+  localStorage.setItem(BRAND_ID_STORAGE_KEY, normalizedBrandId);
 }
 
-function resolveSelectedBrandId(payload: AuthMeResponse) {
+function resolveSelectedBrandId(
+  payload: AuthMeResponse,
+  requestHeaders?: Record<string, string>,
+) {
   const brandIds = new Set(payload.brands.map((brand) => brand.id));
-  const storedBrandId = readStoredBrandId();
+  const storedBrandId = readStoredBrandId(requestHeaders);
   const backendSelectedBrandId = payload.user.selectedBrandId;
 
   if (storedBrandId && brandIds.has(storedBrandId)) {
@@ -163,8 +201,11 @@ export const useAuthStore = defineStore("auth", {
   },
 
   actions: {
-    applyAuthPayload(payload: AuthMeResponse) {
-      const selectedBrandId = resolveSelectedBrandId(payload);
+    applyAuthPayload(
+      payload: AuthMeResponse,
+      requestHeaders?: Record<string, string>,
+    ) {
+      const selectedBrandId = resolveSelectedBrandId(payload, requestHeaders);
       const permissionsFromBrandConfig = extractPermissionsFromBrandConfig(
         payload.brandConfig,
       );
@@ -230,6 +271,7 @@ export const useAuthStore = defineStore("auth", {
       this.permissions = [];
       this.brandConfig = null;
       this.hydrated = true;
+      persistBrandId(null);
     },
 
     async setSelectedBrandId(brandId: string | null) {
@@ -284,7 +326,7 @@ export const useAuthStore = defineStore("auth", {
             credentials: "include",
           });
 
-          this.applyAuthPayload(response);
+          this.applyAuthPayload(response, requestHeaders);
           await this.refreshBrandContext(
             this.user?.selectedBrandId ?? null,
             response.permissions,

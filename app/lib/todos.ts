@@ -1,0 +1,138 @@
+import type { TodoApiItem, TodoRow } from "@/types/todo";
+
+export const mockTodoApiItems: TodoApiItem[] = [
+  {
+    id: "todo-001",
+    customerId: "cus-1001",
+    customerName: "Acme Holdings",
+    company: "Acme Holdings",
+    subject: "Review loyalty campaign copy",
+    priority: "High",
+    nextStep: "Follow Up",
+    dueAt: "2026-03-09T09:30:00.000Z",
+    bucket: "today",
+    noteCount: 3,
+    assignee: "Nina",
+  },
+  {
+    id: "todo-002",
+    customerId: "cus-1002",
+    customerName: "Blue Peak Resort",
+    company: "Blue Peak Resort",
+    subject: "Confirm CRM onboarding checklist",
+    priority: "Medium",
+    nextStep: "Call",
+    dueAt: "2026-03-08T04:00:00.000Z",
+    bucket: "overdue",
+    noteCount: 1,
+    assignee: "Arun",
+  },
+  {
+    id: "todo-003",
+    customerId: "cus-1003",
+    customerName: "Northstar Retail",
+    company: "Northstar Retail",
+    subject: "Prepare segment recommendation",
+    priority: "Low",
+    nextStep: "Email",
+    dueAt: "2026-03-11T07:45:00.000Z",
+    bucket: "upcoming",
+    noteCount: 2,
+    assignee: "Mali",
+  },
+  {
+    id: "todo-004",
+    customerId: "cus-1004",
+    customerName: "Luna Fitness",
+    company: "Luna Fitness",
+    subject: "Send pricing revision",
+    priority: "High",
+    nextStep: "Proposal",
+    dueAt: "2026-03-09T13:15:00.000Z",
+    bucket: "today",
+    noteCount: 4,
+    assignee: "Noah",
+  },
+  {
+    id: "todo-005",
+    customerId: "cus-1005",
+    customerName: "Sierra Cafe Group",
+    company: "Sierra Cafe Group",
+    subject: "Re-open automation issue",
+    priority: "Medium",
+    nextStep: "Review",
+    dueAt: "2026-03-07T16:30:00.000Z",
+    bucket: "overdue",
+    noteCount: 5,
+    assignee: "Pim",
+  },
+  {
+    id: "todo-006",
+    customerId: "cus-1006",
+    customerName: "Harbor Commerce",
+    company: "Harbor Commerce",
+    subject: "Plan quarterly growth workshop",
+    priority: "Low",
+    nextStep: "Meeting",
+    dueAt: "2026-03-12T10:00:00.000Z",
+    bucket: "upcoming",
+    noteCount: 1,
+    assignee: "Mina",
+  },
+  {
+    id: "todo-007",
+    customerId: "cus-1007",
+    customerName: "Vertex Living",
+    company: "Vertex Living",
+    subject: "Approve audience export",
+    priority: "High",
+    nextStep: "Approval",
+    dueAt: "2026-03-09T15:00:00.000Z",
+    bucket: "today",
+    noteCount: 2,
+    assignee: "Ken",
+  },
+  {
+    id: "todo-008",
+    customerId: "cus-1008",
+    customerName: "Echo Learning",
+    company: "Echo Learning",
+    subject: "Document tracking requirements",
+    priority: "Medium",
+    nextStep: "Draft",
+    dueAt: "2026-03-14T08:00:00.000Z",
+    bucket: "upcoming",
+    noteCount: 2,
+    assignee: "June",
+  },
+];
+
+function formatTodoDueDate(dueAt: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(dueAt));
+}
+
+export function mapTodoApiItemToRow(item: TodoApiItem): TodoRow {
+  return {
+    id: item.id,
+    customerId: item.customerId,
+    customerName: item.customerName,
+    company: item.company,
+    subject: item.subject,
+    priority: item.priority,
+    nextStep: item.nextStep,
+    dueDateLabel: formatTodoDueDate(item.dueAt),
+    dueAt: item.dueAt,
+    bucket: item.bucket,
+    noteCount: item.noteCount,
+    assignee: item.assignee,
+  };
+}
+
+export function mapTodoApiItemsToRows(items: TodoApiItem[]) {
+  return items.map(mapTodoApiItemToRow);
+}

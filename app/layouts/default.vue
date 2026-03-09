@@ -14,19 +14,53 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { moduleMenuItems } from "@/constants/module-menu";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { matchesRoutePath, normalizeRoutePath } from "@/utils/permission-routing";
+
+const route = useRoute();
+const { locales } = useI18n();
+
+const localeCodes = computed(() =>
+  locales.value.map((locale) =>
+    typeof locale === "string" ? locale : locale.code,
+  ),
+);
+
+const breadcrumbs = computed(() => {
+  const currentPath = normalizeRoutePath(route.path, localeCodes.value);
+
+  for (const item of moduleMenuItems) {
+    const matchedSubItem = item.subItems?.find((subItem) =>
+      matchesRoutePath(currentPath, subItem.link),
+    );
+
+    if (matchedSubItem) {
+      return [
+        { title: item.title, link: item.link },
+        { title: matchedSubItem.title },
+      ];
+    }
+
+    if (matchesRoutePath(currentPath, item.link)) {
+      return [{ title: item.title }];
+    }
+  }
+
+  return [];
+});
 </script>
 
 <template>
   <SidebarProvider>
     <AppSidebar />
     <SidebarInset>
-      <header class="flex h-16 shrink-0 items-center gap-2">
+      <header class="flex h-16 shrink-0 items-center gap-2 border-b">
         <div class="flex items-center gap-2 px-4">
           <SidebarTrigger class="-ml-1" />
           <Separator
@@ -35,14 +69,20 @@ import {
           />
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItem class="hidden md:block">
-                <BreadcrumbLink href="#">
-                  Building Your Application
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator class="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Data Fetching</BreadcrumbPage>
+              <template v-if="breadcrumbs.length > 1">
+                <BreadcrumbItem class="hidden md:block">
+                  <BreadcrumbLink as-child>
+                    <NuxtLink :to="breadcrumbs[0]?.link ?? '/'">
+                      {{ breadcrumbs[0]?.title }}
+                    </NuxtLink>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator class="hidden md:block" />
+              </template>
+              <BreadcrumbItem v-if="breadcrumbs.length">
+                <BreadcrumbPage>
+                  {{ breadcrumbs[breadcrumbs.length - 1]?.title }}
+                </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
